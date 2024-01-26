@@ -2,6 +2,8 @@ package br.com.alurafood.pagamentos.controller;
 
 import br.com.alurafood.pagamentos.dto.PagamentoDto;
 import br.com.alurafood.pagamentos.service.PagamentoService;
+import org.aspectj.bridge.Message;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +22,8 @@ public class PagamentoController {
 
     @Autowired
     private PagamentoService service;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     @GetMapping
     public Page<PagamentoDto> listar(@PageableDefault(size = 10) Pageable paginacao) {
@@ -33,13 +37,18 @@ public class PagamentoController {
         return ResponseEntity.ok(dto);
     }
 
+    //Cadastramento direto
+//    @PostMapping
+//    public ResponseEntity<PagamentoDto> cadastrar(@RequestBody @Valid PagamentoDto dto, UriComponentsBuilder uriBuilder) {
+//        PagamentoDto pagamento = service.criarPagamento(dto);
+//        URI endereco = uriBuilder.path("/pagamentos/{id}").buildAndExpand(pagamento.getId()).toUri();
+//        return ResponseEntity.created(endereco).body(pagamento);
+//    }
 
+    // Cadastramento utilizando RabbitMq
     @PostMapping
-    public ResponseEntity<PagamentoDto> cadastrar(@RequestBody @Valid PagamentoDto dto, UriComponentsBuilder uriBuilder) {
-        PagamentoDto pagamento = service.criarPagamento(dto);
-        URI endereco = uriBuilder.path("/pagamentos/{id}").buildAndExpand(pagamento.getId()).toUri();
-
-        return ResponseEntity.created(endereco).body(pagamento);
+    public String processar(@RequestBody PagamentoDto request) {
+        return service.solicitarPagamento(request);
     }
 
     @PutMapping("/{id}")

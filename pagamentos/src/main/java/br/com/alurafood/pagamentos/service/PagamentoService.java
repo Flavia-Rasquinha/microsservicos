@@ -1,11 +1,14 @@
 package br.com.alurafood.pagamentos.service;
 
+import br.com.alurafood.pagamentos.producer.PagamentoRequestProducer;
 import br.com.alurafood.pagamentos.dto.PagamentoDto;
 import br.com.alurafood.pagamentos.http.PedidoClient;
 import br.com.alurafood.pagamentos.model.Pagamento;
 import br.com.alurafood.pagamentos.model.Status;
 import br.com.alurafood.pagamentos.repository.PagamentoRepositoy;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.modelmapper.ModelMapper;
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +27,12 @@ public class PagamentoService {
     private ModelMapper modelMapper;
 
     private PedidoClient pedido;
+
+    @Autowired
+    private AmqpTemplate amqpTemplate;
+
+    @Autowired
+    private PagamentoRequestProducer producer;
 
     public Page<PagamentoDto> obterTodos(Pageable paginacao) {
         return repository
@@ -79,5 +88,18 @@ public class PagamentoService {
         pagamento.get().setStatus(Status.CONFIRMADO_SEM_INTEGRACAO);
         repository.save(pagamento.get());
     }
+    public String solicitarPagamento(PagamentoDto request){
+        producer.sendSubscription(request);
+        return "Pagamento aguardando confirmação .. ";
+    }
+
+    public void erroPagamento(String payload){
+        System.out.println("==== RESPOSTA ERRO =====" + payload);
+    }
+
+    public void sucessoPagamento(String payload){
+        System.out.println("==== RESPOSTA SUCESSO ====" + payload);
+    }
+
 }
 
